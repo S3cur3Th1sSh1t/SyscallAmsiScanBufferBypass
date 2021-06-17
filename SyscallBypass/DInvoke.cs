@@ -4003,11 +4003,11 @@ namespace Patch
             {
                 // Verify process & architecture
                 bool isWOW64 = DynamicNative.NtQueryInformationProcessWow64Information((IntPtr)(-1));
-                if (IntPtr.Size == 4 && isWOW64)
+                /*if (IntPtr.Size == 4 && isWOW64)
                 {
                     throw new InvalidOperationException("Generating Syscall stubs is not supported for WOW64.");
-                }
-
+                }*/
+                ProcessModule NativeModule = null;
                 // Find the path for ntdll by looking at the currently loaded module
                 string NtdllPath = string.Empty;
                 ProcessModuleCollection ProcModules = Process.GetCurrentProcess().Modules;
@@ -4016,6 +4016,16 @@ namespace Patch
                     if (Mod.FileName.EndsWith("ntdll.dll", StringComparison.OrdinalIgnoreCase))
                     {
                         NtdllPath = Mod.FileName;
+                    }
+
+                }
+
+                foreach (ProcessModule _ in Process.GetCurrentProcess().Modules)
+                {
+                    if (_.FileName.EndsWith("ntdll.dll", StringComparison.OrdinalIgnoreCase))
+                    {
+                        NativeModule = _;
+                        NtdllPath = NativeModule.FileName;
                     }
                 }
 
@@ -4075,6 +4085,30 @@ namespace Patch
                 if (BytesWritten != 0x50)
                 {
                     throw new InvalidOperationException("Failed to write to memory.");
+                }
+
+                // Verify process & architecture
+                //bool isWOW64 = Native.NtQueryInformationProcessWow64Information((IntPtr)(-1));
+
+                // Create custom WOW64 stub
+                if (IntPtr.Size == 4 && isWOW64)
+                {
+                    IntPtr pNativeWow64Transition = GetExportAddress(NativeModule.BaseAddress, "Wow64Transition");
+                    byte bRetValue = Marshal.ReadByte(pCallStub, 13);
+
+                    // CALL DWORD PTR ntdll!Wow64SystemServiceCall
+                    Marshal.WriteByte(pCallStub, 5, 0xff);
+                    Marshal.WriteByte(pCallStub, 6, 0x15);
+                    Marshal.WriteInt32(pCallStub, 7, pNativeWow64Transition.ToInt32());
+
+                    // RET <val>
+                    Marshal.WriteByte(pCallStub, 11, 0xc2);
+                    Marshal.WriteByte(pCallStub, 12, bRetValue);
+                    Marshal.WriteByte(pCallStub, 13, 0x00);
+
+                    // NOP for alignment
+                    Marshal.WriteByte(pCallStub, 14, 0x90);
+                    Marshal.WriteByte(pCallStub, 15, 0x90);
                 }
 
                 // Change call stub permissions
